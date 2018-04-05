@@ -1,0 +1,287 @@
+#include <iostream>
+#include <math.h>
+#include <cstdlib>
+#include <time.h>
+#include <fstream>
+
+using namespace std;
+
+static int bity = 5,
+                liczba_populacji = 6,
+                krzyzowanie = 7,
+                mutacja = 2,
+                iteracja = 10;
+ofstream plik;
+
+int losuj(int i_min, int i_max);
+int f_przystosowania(int **t_populacja, int *t_przystosowania, int x, int y);
+int f_ruletka(int *t_przystosowania, int *t_ruletki);
+int f_nowa_populacja(int **t_populacja, int **t_populacja_dzieci, int *t_ruletki);
+int f_krzyzowanie(int **t_populacja, int **t_populacja_dzieci);
+int f_mutacja(int **t_populacja);
+void f_wypisz(int **t_populacja, int *t_przystosowania, int *t_ruletki);
+void f_wypisz_max(int **t_populacja, int *t_przystosowania);
+//------------------------------------------------------------------------------------
+int main()
+{
+    cout << "************************************************* \n"
+         << "** **** ** *** Algorytm genetyczny *** ** **** ** \n"
+         << "** **** ** *** * Daniel Rejsz * ** *** ** **** ** \n"
+         << "************************************************* \n"
+         << "(funkcja przystosowania a^2*x+b)"
+         << "\n\n";
+    srand(time(NULL));   //zaladowanie ziarna czasu
+    int **tabl_populacja = new int *[liczba_populacji];
+    int **tabl_populacja_dzieci = new int *[liczba_populacji];
+    int *tabl_przystosowania = new int[liczba_populacji];
+    int *tabl_ruletki = new int[liczba_populacji];
+
+
+    plik.open("C:\\Documents and Settings\\Student.102-06-E03041\\Pulpit\\AG.txt", ios::app);
+    if (plik.good() != true)
+    {
+        cout << "Plik zostal nie otwarty \n";
+        return 0;
+    }
+    plik << "Algorytm genetyczny "
+         << "krzyzowanie: " << krzyzowanie
+         << ", mutacja: " << mutacja << "\n";
+    int a = 0, b = 0;
+    cout << "Podaj a: ";
+    cin >> a;
+    cout << "Podaj b: ";
+    cin >> b;
+    cout << "\nFunkcja przystosowania " << a << "^2*x+ " << b << "\n";
+    plik << "Funkcja przystosowania " << a << "^2*x+" << b << "\n";
+    
+    for (int i=0 ; i<liczba_populacji ; ++i)
+    {
+        tabl_populacja[i] = new int[bity];
+        tabl_populacja_dzieci[i] = new int[bity];
+    }
+
+    for (int p=0 ; p<liczba_populacji ; ++p)
+    {
+        plik << "Rodzic " << p+1 << ": ";
+        cout << "Rodzic " << p+1 << ": ";
+        for (int b=0 ; b<bity ; ++b)
+        {
+            tabl_populacja[p][b] = losuj(0,2); //wylosowanie 0 lub 1
+            tabl_populacja_dzieci[p][b] = 0;
+            plik << tabl_populacja[p][b];
+            cout << tabl_populacja[p][b];
+        }
+        plik << "\n";
+        cout << "\n";
+    }
+    for (int i=0 ; i<liczba_populacji ; ++i)
+    {
+        tabl_przystosowania[i] = 0;
+        tabl_ruletki[i] = 0;
+    }
+
+    int licznik = 0;
+    while (iteracja > 0)
+    {
+        ++licznik;
+        plik << "\n--------Pokolenie [" << licznik << "] ----------------------------\n";
+        cout << "\n--------Pokolenie [" << licznik << "] ----------------------------\n";
+        f_przystosowania(tabl_populacja, tabl_przystosowania, a, b);
+        f_ruletka(tabl_przystosowania, tabl_ruletki);
+        f_nowa_populacja(tabl_populacja, tabl_populacja_dzieci, tabl_ruletki);
+        f_krzyzowanie(tabl_populacja, tabl_populacja_dzieci);
+        f_mutacja(tabl_populacja);
+        f_przystosowania(tabl_populacja, tabl_przystosowania, a, b);
+        f_ruletka(tabl_przystosowania, tabl_ruletki);
+        f_wypisz(tabl_populacja, tabl_przystosowania, tabl_ruletki);
+
+        --iteracja;
+        if (iteracja == 0) 
+        {
+          f_wypisz_max(tabl_populacja, tabl_przystosowania);
+        }
+           
+                     
+    }
+
+
+//wyczyszczenie pamieci
+    delete [] tabl_przystosowania;
+    delete [] tabl_ruletki;
+    for (int i=0 ; i<liczba_populacji ; ++i)
+    {
+        delete [] tabl_populacja[i];
+        delete [] tabl_populacja_dzieci[i];
+    }
+    plik << "\nKONIEC\n";
+    plik << "---------------------------------------------------";
+    plik << "\n\n";
+    cout << "\nKONIEC\n";
+    plik.close();
+    system("Pause");
+    return EXIT_SUCCESS;
+}
+//---------------------------------------------------------------
+int losuj(int i_min, int i_max)
+{
+    return rand() % i_max + i_min;
+}
+//przystosowanie
+int f_przystosowania(int **t_populacja, int *t_przystosowania, int x, int y)
+{
+    int pomocnicza = 0;
+    int wynik = 0;
+    int potega = bity-1;
+    for (int i=0 ; i<liczba_populacji ; ++i)
+    {
+        for (int j=0 ; j<bity ; ++j)
+        {
+            pomocnicza = t_populacja[i][j];
+            wynik += pomocnicza * pow(2, potega);
+            --potega;
+        }
+        t_przystosowania[i] = (x*x)*wynik + y;
+        wynik = 0;
+        potega = bity-1;
+    }
+}
+//ruletka
+int f_ruletka(int *t_przystosowania, int *t_ruletki)
+{
+    int pomocnicza = 0;
+    for (int i=0 ; i<liczba_populacji ; ++i)
+    {
+        pomocnicza += t_przystosowania[i];
+        t_ruletki[i] = pomocnicza;
+    }
+}
+//wylosowanie nowej populacji
+int f_nowa_populacja(int **t_populacja, int **t_populacja_dzieci, int *t_ruletki)
+{
+    int nowy = 0;
+    int pomocnicza = 0;
+    int max = t_ruletki[liczba_populacji-1];
+    for (int i=0 ; i<liczba_populacji ; ++i)
+    {
+        nowy = losuj(0, max);
+        for (int k=0 ; k<liczba_populacji ; ++k)
+        {
+            if ( nowy > t_ruletki[k]) ++pomocnicza;
+        }
+        //plik << "Nowy osobnik: " << pomocnicza+1 << "\n";
+        cout << "Nowy osobnik: " << pomocnicza+1 << "\n";
+        for (int j=0 ; j<bity ; ++j)
+        {
+            t_populacja_dzieci[i][j] = t_populacja[pomocnicza][j];
+        }
+            pomocnicza = 0;
+    }
+}
+//krzyzowanie
+int f_krzyzowanie(int **t_populacja, int **t_populacja_dzieci)
+{
+    for (int i=0 ; i<liczba_populacji ; i=i+2)
+    {
+        int losowanie_krzyzowania = losuj(1,10);   // krzyzowanie = 7
+        if (losowanie_krzyzowania < krzyzowanie)
+        {
+            int miejsce_krz = losuj(1,bity-1);
+            //plik << "Osobnik " << i+1 << " krzyzuje sie z osobnikiem " << i+2
+            //     << " w miejscu: " << miejsce_krz << "\n";
+            cout << "Osobnik " << i+1 << " krzyzuje sie z osobnikiem " << i+2
+                 << " w miejscu: " << miejsce_krz << "\n";
+            for (int j=0 ; j<miejsce_krz ; ++j)
+            {
+                t_populacja[i][j] = t_populacja_dzieci[i][j];
+                t_populacja[i+1][j] = t_populacja_dzieci[i+1][j];
+            }
+            for (int j=miejsce_krz ; j<bity ; ++j)
+            {
+                t_populacja[i][j] = t_populacja_dzieci[i+1][j];
+                t_populacja[i+1][j] = t_populacja_dzieci[i][j];
+            }
+        }
+        else
+        {
+            for (int j=0 ; j<bity ; ++j)
+            {
+                t_populacja[i][j] = t_populacja_dzieci[i][j];
+                t_populacja[i+1][j] = t_populacja_dzieci[i+1][j];
+            }
+        }
+    }
+}
+//mutacja
+int f_mutacja(int **t_populacja)
+{
+    for (int i=0 ; i<liczba_populacji ; ++i)
+    {
+        int losowanie_mutacji = losuj(1,10);    //mutacja = 2
+        if (losowanie_mutacji <= mutacja)
+        {
+            int miejsce_mutacji = losuj(0,bity);
+            //plik <<  "Osobnik " << i+1 << ", miejsce mutacji: " << miejsce_mutacji+1 <<"\n";
+            cout <<  "Osobnik " << i+1 << ", miejsce mutacji: " << miejsce_mutacji+1 <<"\n";
+            if (t_populacja[i][miejsce_mutacji] == 0)
+            {
+                t_populacja[i][miejsce_mutacji] = 1;
+            } else t_populacja[i][miejsce_mutacji] = 0;
+        }
+    }
+}
+void f_wypisz(int **t_populacja, int *t_przystosowania, int *t_ruletki)
+{
+    for (int i=0 ; i<liczba_populacji ; ++i)
+    {
+        plik << "Osobnik " << i+1 << ": ";
+        cout << "Osobnik " << i+1 << ": ";
+        for (int j=0 ; j<bity ; ++j)
+        {
+            plik << t_populacja[i][j] << "";
+            cout << t_populacja[i][j] << "";
+        }
+        plik << "   ---> przystosowanie: " << t_przystosowania[i] << "\n";
+        cout << "   ---> przystosowanie: " << t_przystosowania[i] << "\n";
+    }
+    plik << "Suma przystosowania: " << t_ruletki[liczba_populacji-1] << " \n";
+    cout << "Suma przystosowania: " << t_ruletki[liczba_populacji-1] << " \n";
+}
+void f_wypisz_max(int **t_populacja, int *t_przystosowania) 
+{
+     int pomocnicza = 0;
+     int max = 0;
+     int wynik = 0;
+     int osobnik = 0;
+     int potega = bity-1;
+     for (int i=0 ; i<liczba_populacji ; ++i)
+     {
+        for (int j=0 ; j<bity ; ++j)
+        {
+            pomocnicza = t_populacja[i][j];
+            wynik += pomocnicza * pow(2, potega);
+            --potega;
+        }
+        if (wynik > max) 
+        {
+            max = wynik;
+            osobnik = i;
+        }
+        wynik = 0;
+        potega = bity-1;
+    }
+    for (int i=0 ; i<bity ; ++i)
+    {
+        pomocnicza = t_populacja[osobnik][i];
+        wynik += pomocnicza * pow(2, potega);
+        --potega;
+    }
+        
+    cout << "\nNajbardziej przystosowanym osobnikiem ostatniego pokolenia " 
+         << "jest osobnik: \n"
+         << osobnik+1 << " dla x = : " << wynik << "\n";
+    plik << "\nNajbardziej przystosowanym osobnikiem ostatniego pokolenia " 
+         << "jest osobnik: \n"
+         << osobnik+1 << " dla x = : " << wynik << "\n";
+}
+
+
